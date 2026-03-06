@@ -1,7 +1,11 @@
 
 const Result = () => {
+
+  
   return (
-    <div>Result</div>
+    <div>
+
+    </div>
   )
 }
 
