@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
 import type { Project } from "../types"
 import { dummyGenerations } from "../assets/assets"
-import { ImageIcon, Loader2Icon, RefreshCwIcon, VideoIcon } from "lucide-react"
+import { ImageIcon, Loader2Icon, RefreshCwIcon, SparkleIcon, VideoIcon } from "lucide-react"
 import { Link } from "react-router-dom"
-import { GhostButton } from "../components/Buttons"
+import { GhostButton, PrimaryButton } from "../components/Buttons"
 
 const Result = () => {
 
@@ -17,6 +17,10 @@ const Result = () => {
       setProjectData(dummyGenerations[0]);
       setLoading(false)
     }, 3000)
+  }
+
+  const handleGenerateVideo = async ()=>{
+    setIsGenetrating(true)
   }
   
   useEffect(()=>{
@@ -87,7 +91,22 @@ const Result = () => {
                     <VideoIcon className="size-24"/>
                   </div>
                   <h3 className="text-xl font-semibold mb-2 ">Video Magic</h3>
-                  <p className="text-gray-400 text-sm mb-6 ">Turn this static image into a dynamic for social media.</p>
+                  <p className="text-gray-400 text-sm mb-6 ">Turn this static 
+                  image into a dynamic for social media.</p>
+                  {!project.generatedVideo ? (
+                    <PrimaryButton onClick={handleGenerateVideo} disabled={isGenerating} className="w-full">
+                      {isGenerating ? (
+                        <>Generating Video...  </>
+                      ) : (
+                        <><SparkleIcon className="size-4"/>Generated Video</>
+                      )}
+                      
+                    </PrimaryButton>
+                  ):(
+                    <div className="p-3 bg-green-500/10 border bordre-green-500/20 rounded-xl text-green-400 text-center text-sm font-medium">
+                      Video Generated Successfully!
+                    </div>
+                  )}
                 </div>
             </div>
         </div>
