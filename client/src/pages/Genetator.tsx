@@ -1,118 +1,205 @@
-import React, { use, useState } from "react"
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { useAuth } from '@clerk/react'
 import Title from "../components/Title"
 import UploadZone from "../components/UploadZone"
 import { Loader2Icon, RectangleHorizontalIcon, RectangleVerticalIcon, Wand2Icon } from "lucide-react"
 import { PrimaryButton } from "../components/Buttons"
+import { getApiUrl } from "../config/api"
 
 const Genetator = () => {
+    const { getToken, userId } = useAuth();
+    const navigate = useNavigate();
 
-    const [name, setName] =useState('')
-    const [productName, setProductName] =useState('')
-    const [productDecription, setProductDescription] =useState('')
-    const [aspectRatio, setAspectRatio] =useState('9:16')
-    const [productImage, setProductImage] =useState<File | null>(null)
-    const [modelImage, setModelImage] =useState<File | null>(null)
-    const [userPrompt, setUserPrompt] =useState('')
-    const [isGenrating, setIsGenerating] =useState(false)
+    const [projectName, setProjectName] = useState('')
+    const [productName, setProductName] = useState('')
+    const [productDescription, setProductDescription] = useState('')
+    const [aspectRatio, setAspectRatio] = useState('9:16')
+    const [productImage, setProductImage] = useState<File | null>(null)
+    const [modelImage, setModelImage] = useState<File | null>(null)
+    const [userPrompt, setUserPrompt] = useState('')
+    const [isGenerating, setIsGenerating] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
-
-    const handleFileChange=(e:React.ChangeEvent<HTMLInputElement>, type:'product' | 'model')=>{
-        if(e.target.files && e.target.files[0]){
-            if(type === 'product'){
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'product' | 'model') => {
+        if (e.target.files && e.target.files[0]) {
+            if (type === 'product') {
                 setProductImage(e.target.files[0])
-            }else{
+            } else {
                 setModelImage(e.target.files[0])
             }
         }
     }
-    const handleGenerate =async (e : React.FormEvent<HTMLFormElement>)=>{
-        e.preventDefault();
+
+    const handleGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        setError(null)
+
+        if (!userId) {
+            setError('Please sign in before generating.')
+            return
+        }
+
+        if (!productImage || !modelImage) {
+            setError('Please upload both a product image and a model image.')
+            return
+        }
+
+        if (!projectName.trim() || !productName.trim()) {
+            setError('Project name and product name are required.')
+            return
+        }
+
+        setIsGenerating(true)
+
+        try {
+            const token = await getToken()
+            const formData = new FormData()
+            formData.append('images', productImage)
+            formData.append('images', modelImage)
+            formData.append('name', projectName)
+            formData.append('productName', productName)
+            formData.append('productDescription', productDescription)
+            formData.append('aspectRatio', aspectRatio)
+            formData.append('userPrompt', userPrompt)
+            formData.append('targetLength', '5')
+
+            const response = await fetch(getApiUrl('/api/project/create'), {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            })
+
+            const data = await response.json()
+            if (!response.ok) {
+                throw new Error(data?.message || 'Unable to create project')
+            }
+
+            navigate(`/result/${data.project.id}`)
+        } catch (error: any) {
+            setError(error.message || 'Failed to create project.')
+        } finally {
+            setIsGenerating(false)
+        }
     }
 
-  return (
-    <div className="min-h-screen text-white p-6 md:p-12 mt-28">
+    return (
+        <div className="min-h-screen text-white p-6 md:p-12 mt-28">
+            <form onSubmit={handleGenerate} className="max-w-4xl mx-auto mb-40">
+                <Title
+                    heading="Create In-Context Image"
+                    description="Upload your model and product image to generate stunning UGC, short-form videos and social media posts"
+                />
 
-        <form  onSubmit={handleGenerate} className="max-w-4xl mx-auto mb-40"> 
-
-            <Title heading="Create In-Context Image"   description="Upload Your model and product image to generate stunnig UGC,
-                 short-from videos and social media posts"/>
-
-
-            <div className="flex gap-20 max-sm:flex-col items-start justify-between">
-                
-                {/* Left col */}
-                <div className="flex flex-col w-full sm:max-w-60 gap-8 mt-8 mb-12">
-                    <UploadZone label="Product Image" file={productImage} onClear={()=>setProductImage(null)} onChange={(e)=>handleFileChange(e, 'product')}/>
-                    <UploadZone label="Model Image" file={modelImage} onClear={()=>setModelImage(null)} onChange={(e)=>handleFileChange(e, 'model')}/>
-                </div>
-
-                {/* Right col */}
-                <div className="w-full">
-                    <div className="mb-4 text-gray-300">
-                        <label htmlFor="productName" className="block text-sm mb-4">Project Name</label>
-                        <input type="text" id="productName" value={productName}  onChange={(e)=>setName(e.target.value)} placeholder="Name Your project"  required className="
-                        w-full  bg-white/3 rounded-lg  boredre-2 p-4 text-sm  border-violet-200/10  focus:border-violet-500/50  outline-none 
-                        transition-all"/>
+                <div className="flex gap-20 max-sm:flex-col items-start justify-between">
+                    <div className="flex flex-col w-full sm:max-w-60 gap-8 mt-8 mb-12">
+                        <UploadZone
+                            label="Product Image"
+                            file={productImage}
+                            onClear={() => setProductImage(null)}
+                            onChange={(e) => handleFileChange(e, 'product')}
+                        />
+                        <UploadZone
+                            label="Model Image"
+                            file={modelImage}
+                            onClear={() => setModelImage(null)}
+                            onChange={(e) => handleFileChange(e, 'model')}
+                        />
                     </div>
-                    <div className="mb-4 text-gray-300">
-                        <label htmlFor="name" className="block text-sm mb-4">Product Name</label>
-                        <input type="text" id="name" value={name}  onChange={(e)=>setProductName(e.target.value)} placeholder="Enter The Name of The Product"  required className="
-                        w-full  bg-white/3 rounded-lg  boredre-2 p-4 text-sm  border-violet-200/10  focus:border-violet-500/50  outline-none 
-                        transition-all"/>
-                    </div>
-                    <div className="mb-4 text-gray-300">
-                        <label htmlFor="productDescription" className="block text-sm mb-4">Product Description <span className="text-xs text-violet-400">
-                            (optional)</span></label>
-                        <textarea id="productDescription"  rows={4}  value={productDecription} onChange={(e)=>setProductDescription(e.target.value)} 
-                            placeholder="Enter the Desription of The Product"  className="w-full bg-white/3 rounded-lg border-2 p-4
-                            text-sm  border-violet-200/10 focus:border-violet-500/50 outline-none resize-none transition-all"
+
+                    <div className="w-full">
+                        <div className="mb-4 text-gray-300">
+                            <label htmlFor="projectName" className="block text-sm mb-4">Project Name</label>
+                            <input
+                                type="text"
+                                id="projectName"
+                                value={projectName}
+                                onChange={(e) => setProjectName(e.target.value)}
+                                placeholder="Name your project"
+                                required
+                                className="w-full bg-white/3 rounded-lg border-2 p-4 text-sm border-violet-200/10 focus:border-violet-500/50 outline-none transition-all"
                             />
-                    </div>
-
-                    <div className="mb-4 text-gray-300">
-                        <label className="block text-sm mb-4">Aspect Ratio</label>
-                        <div className="flex gap-3">
-                            <RectangleVerticalIcon onClick={()=> setAspectRatio('9:16')} 
-                                className={`p-2.5 size-13 bg-whiet/6 rounded transition-all ring-2 
-                                    ring-transparent cursor-pointer 
-                                    ${aspectRatio=== '9:16' ? 'ring-violet-500/50 bg-white/10' : '' }`}
+                        </div>
+                        <div className="mb-4 text-gray-300">
+                            <label htmlFor="productName" className="block text-sm mb-4">Product Name</label>
+                            <input
+                                type="text"
+                                id="productName"
+                                value={productName}
+                                onChange={(e) => setProductName(e.target.value)}
+                                placeholder="Enter the name of the product"
+                                required
+                                className="w-full bg-white/3 rounded-lg border-2 p-4 text-sm border-violet-200/10 focus:border-violet-500/50 outline-none transition-all"
                             />
-                            <RectangleHorizontalIcon onClick={()=> setAspectRatio('16:9')} 
-                                className={`p-2.5 size-13 bg-whiet/6 rounded transition-all ring-2 
-                                    ring-transparent cursor-pointer 
-                                    ${aspectRatio=== '16:9' ? 'ring-violet-500/50 bg-white/10' : '' }`}
+                        </div>
+                        <div className="mb-4 text-gray-300">
+                            <label htmlFor="productDescription" className="block text-sm mb-4">
+                                Product Description <span className="text-xs text-violet-400">(optional)</span>
+                            </label>
+                            <textarea
+                                id="productDescription"
+                                rows={4}
+                                value={productDescription}
+                                onChange={(e) => setProductDescription(e.target.value)}
+                                placeholder="Enter the description of the product"
+                                className="w-full bg-white/3 rounded-lg border-2 p-4 text-sm border-violet-200/10 focus:border-violet-500/50 outline-none resize-none transition-all"
+                            />
+                        </div>
+
+                        <div className="mb-4 text-gray-300">
+                            <label className="block text-sm mb-4">Aspect Ratio</label>
+                            <div className="flex gap-3">
+                                <RectangleVerticalIcon
+                                    onClick={() => setAspectRatio('9:16')}
+                                    className={`p-2.5 size-13 rounded transition-all ring-2 ring-transparent cursor-pointer ${aspectRatio === '9:16' ? 'ring-violet-500/50 bg-white/10' : 'bg-white/5'}`}
+                                />
+                                <RectangleHorizontalIcon
+                                    onClick={() => setAspectRatio('16:9')}
+                                    className={`p-2.5 size-13 rounded transition-all ring-2 ring-transparent cursor-pointer ${aspectRatio === '16:9' ? 'ring-violet-500/50 bg-white/10' : 'bg-white/5'}`}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mb-4 text-gray-300">
+                            <label htmlFor="userPrompt" className="block text-sm mb-4">
+                                User Prompt <span className="text-xs text-violet-400">(optional)</span>
+                            </label>
+                            <textarea
+                                id="userPrompt"
+                                rows={4}
+                                value={userPrompt}
+                                onChange={(e) => setUserPrompt(e.target.value)}
+                                placeholder="Describe how you want the narration to be."
+                                className="w-full bg-white/3 rounded-lg border-2 p-4 text-sm border-violet-200/10 focus:border-violet-500/50 outline-none resize-none transition-all"
                             />
                         </div>
                     </div>
-
-                    <div className="mb-4 text-gray-300">
-                        <label htmlFor="userPrompt" className="block text-sm mb-4">User Prompt <span className="text-xs text-violet-400">
-                            (optional)</span></label>
-                        <textarea id="userPrompt"  rows={4}  value={userPrompt} onChange={(e)=>setUserPrompt(e.target.value)} 
-                            placeholder="Describe how you want the narration to be."  className="w-full bg-white/3 rounded-lg border-2 p-4
-                            text-sm  border-violet-200/10 focus:border-violet-500/50 outline-none resize-none transition-all"
-                            />
-                    </div>
                 </div>
-            </div>
-            <div className="flex justify-center mt-10">  
-                <PrimaryButton disabled={isGenrating} className="px-10 py-3 rounded-md 
-                disabled:opacity-70 disabled:cursor-not-allowed">
-                    {isGenrating ? (
-                        <>
-                        <Loader2Icon className="size-5 animate-spin"/> Generating...
-                        </>
-                ) : (
-                <>
-                <Wand2Icon className="size-5"/> Generate Image
-                </>
-                    )}
-                </PrimaryButton>
-            </div>                           
-        </form>
 
-    </div>
-  )
+                {error && (
+                    <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-200">
+                        {error}
+                    </div>
+                )}
+
+                <div className="flex justify-center mt-10">
+                    <PrimaryButton type="submit" disabled={isGenerating} className="px-10 py-3 rounded-md disabled:opacity-70 disabled:cursor-not-allowed">
+                        {isGenerating ? (
+                            <>
+                                <Loader2Icon className="size-5 animate-spin" /> Generating...
+                            </>
+                        ) : (
+                            <>
+                                <Wand2Icon className="size-5" /> Generate Image
+                            </>
+                        )}
+                    </PrimaryButton>
+                </div>
+            </form>
+        </div>
+    )
 }
 
 export default Genetator

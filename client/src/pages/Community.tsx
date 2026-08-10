@@ -3,6 +3,7 @@ import type { Project } from "../types"
 import { dummyGenerations } from "../assets/assets"
 import { Loader2Icon } from "lucide-react"
 import ProjectCard from "../components/ProjectCard"
+import { getApiUrl } from "../config/api"
 
 const Community = () => {
 
@@ -10,10 +11,19 @@ const Community = () => {
   const [loading, setLoading] = useState(true)
 
   const fetchProjects = async () => {
-    setTimeout(() => {
-      setProjects(dummyGenerations);
+    try {
+      const response = await fetch(getApiUrl('/api/project/published'))
+      const data = await response.json()
+      if (response.ok && Array.isArray(data?.projects) && data.projects.length > 0) {
+        setProjects(data.projects)
+      } else {
+        setProjects(dummyGenerations)
+      }
+    } catch (err) {
+      setProjects(dummyGenerations)
+    } finally {
       setLoading(false)
-    }, 3000)
+    }
   }
 
   useEffect(() => {

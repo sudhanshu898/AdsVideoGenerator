@@ -1,17 +1,20 @@
-import { DollarSignIcon, FolderEditIcon, GalleryHorizontalEnd, MenuIcon, SparkleIcon, XIcon } from 'lucide-react';
+import { DollarSignIcon, FolderEditIcon, GalleryHorizontalEnd, MailIcon, MenuIcon, SparkleIcon, XIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GhostButton, PrimaryButton } from './Buttons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { assets } from '../assets/assets.tsx';
-import { useClerk, UserButton, useUser } from '@clerk/react';
+import { useAuth, useClerk, UserButton, useUser } from '@clerk/react';
+import { getApiUrl } from '../config/api';
 
 
 export default function Navbar() {
 
     const navigate = useNavigate()
-    const {user} = useUser()
-    const {openSignIn, openSignUp}=useClerk()
+    const { user } = useUser()
+    const { getToken } = useAuth()
+    const { openSignIn, openSignUp} = useClerk()
+    const [credits, setCredits] = useState<number | null>(null)
 
     const [isOpen, setIsOpen] = useState(false);
 
@@ -20,7 +23,35 @@ export default function Navbar() {
     { name: 'Create', href: '/generate' },
     { name: 'Community', href: '/community' },
     { name: 'Plans', href: '/plans' },
+    { name: 'Contact', href: '/contact' },
 ];
+
+    useEffect(() => {
+        if (!user) {
+            setCredits(null)
+            return
+        }
+
+        const fetchCredits = async () => {
+            try {
+                const token = await getToken()
+                const response = await fetch(getApiUrl('/api/user/credits'), {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                })
+                const data = await response.json()
+                if (!response.ok) {
+                    throw new Error(data?.message || 'Unable to load credits')
+                }
+                setCredits(data.credits ?? null)
+            } catch (error) {
+                setCredits(null)
+            }
+        }
+
+        fetchCredits()
+    }, [user, getToken])
 
     return (
         <motion.nav className='fixed top-5 left-0 right-0 z-50 px-4'
@@ -58,7 +89,7 @@ export default function Navbar() {
                         <div className='flex gap-2'>
                             <GhostButton onClick={()=> navigate('/plans')}
                             className='border-none text-gray-300 sm:py-1.5'>
-                                Credits:
+                                Credits: {credits !== null ? credits : '--'}
                             </GhostButton>
                             <UserButton>
                                 <UserButton.MenuItems>
@@ -73,6 +104,9 @@ export default function Navbar() {
                                     />
                                     <UserButton.Action label='Plans' labelIcon={
                                         <DollarSignIcon size={14}/>} onClick={()=> navigate('/plans')}
+                                    />
+                                    <UserButton.Action label='Contact Support' labelIcon={
+                                        <MailIcon size={14}/>} onClick={()=> navigate('/contact')}
                                     />
 
                                 </UserButton.MenuItems>

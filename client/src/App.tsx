@@ -10,6 +10,7 @@ import MyGenerations from './pages/MyGenerations';
 import Community from './pages/Community';
 import Plans from './pages/Plans';
 import Loading from './pages/Loading';
+import Contact from './pages/Contact';
 
 function App() {
 	return (
@@ -25,6 +26,7 @@ function App() {
 				<Route path='/my-generations' element={<MyGenerations />} />
 				<Route path='/community' element={<Community />} />
 				<Route path='/plans' element={<Plans />} />
+				<Route path='/contact' element={<Contact />} />
 				<Route path='/loading' element={<Loading />} />
 
 			</Routes>

@@ -40,56 +40,52 @@ export const getAllProjects = async(req: Request, res: Response)=>{
 
 //get project by id
 
-export const getProjectById = async(req: Request, res: Response)=>{
+export const getProjectById = async (req: Request, res: Response) => {
     try {
-        
-         const {userId}= req.auth();
-         const projectId = req.params.projectId as string;
-            const project = await prisma.project.findUnique({
-                where: {id: projectId, userId}
-            })
-            if(!project){
-                return res.status(404).json({message: 'Project not found'})
-            }
-            res.json({project})
+        const { userId } = req.auth();
+        const projectId = req.params.projectId as string;
 
-    } catch (error : any) {
+        const project = await prisma.project.findFirst({
+            where: { id: projectId, userId },
+        });
+
+        if (!project) {
+            return res.status(404).json({ message: 'Project not found' });
+        }
+
+        res.json({ project });
+    } catch (error: any) {
         Sentry.captureException(error);
-        res.status(500).json({message:error.code || error.message})
-
+        res.status(500).json({ message: error.code || error.message });
     }
-}
+};
 
 //publised or unpublised
 
-export const toggleProjectPublic = async(req: Request, res: Response)=>{
+export const toggleProjectPublic = async (req: Request, res: Response) => {
     try {
-        
-        
-         const {userId}= req.auth();
-         const projectId = req.params.projectId as string;
-            const project = await prisma.project.findUnique({
-                where: {id: projectId, userId}
-            })
-            if(!project){
-                return res.status(404).json({message: 'Project not found'})
-            }
+        const { userId } = req.auth();
+        const projectId = req.params.projectId as string;
 
-            if(!project?.generatedImage && !project?.generatedVideo){
-                return res.status(400).json({message: 'image or video not generated'})
-            }
+        const project = await prisma.project.findFirst({
+            where: { id: projectId, userId },
+        });
+        if (!project) {
+            return res.status(404).json({ message: 'Project not found' });
+        }
 
-            await prisma.project.update({
-                where: {id: projectId},
-                data: {isPublished: !project.isPublished}
-            })
+        if (!project.generatedImage && !project.generatedVideo) {
+            return res.status(400).json({ message: 'image or video not generated' });
+        }
 
-            res.json({isPublished: !project.isPublished})
+        const updatedProject = await prisma.project.update({
+            where: { id: projectId },
+            data: { isPublished: !project.isPublished },
+        });
 
-            
-    } catch (error : any) {
+        res.json({ isPublished: updatedProject.isPublished });
+    } catch (error: any) {
         Sentry.captureException(error);
-        res.status(500).json({message:error.code || error.message})
-
+        res.status(500).json({ message: error.code || error.message });
     }
-}
+};
